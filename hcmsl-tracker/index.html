@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HCMSL – Staff Welfare Fund Tracker</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="database.js"></script>
+</head>
+<body>
+
+<!-- ═══ HEADER ══════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="flag" aria-label="Flag of Maldives">
+      <div class="flag-crescent"></div>
+    </div>
+    <div class="header-text">
+      <h1>High Commission of Maldives in Sri Lanka</h1>
+      <p>Staff Welfare Fund &amp; Contribution Tracker</p>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active"  onclick="showPage('dashboard',    this)">📊 Dashboard</button>
+    <button class="nav-btn"         onclick="showPage('staff',        this)">👤 Staff</button>
+    <button class="nav-btn"         onclick="showPage('contributions',this)">💰 Contributions</button>
+    <button class="nav-btn"         onclick="showPage('expenditure',  this)">📋 Expenditure</button>
+    <button class="nav-btn"         onclick="showPage('reports',      this)">📄 Reports</button>
+  </nav>
+</header>
+
+<main class="content">
+
+  <!-- ═══ DASHBOARD ══════════════════════════════════════════ -->
+  <section id="page-dashboard" class="page active">
+    <div class="stats-grid" id="stats-grid">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title"><span class="card-icon">💰</span> Recent Contributions</div>
+        <div id="dash-contributions"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-icon">📋</span> Recent Transactions</div>
+        <div id="dash-transactions"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ STAFF ═══════════════════════════════════════════════ -->
+  <section id="page-staff" class="page">
+    <div class="card">
+      <div class="card-title"><span class="card-icon">👤</span> Add Staff Member</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="s-name">Full Name <span style="color:var(--red)">*</span></label>
+          <input id="s-name" type="text" placeholder="e.g. Aski Ahamed">
+        </div>
+        <div class="form-group">
+          <label for="s-title">Designation <span style="color:var(--red)">*</span></label>
+          <input id="s-title" type="text" placeholder="e.g. Third Secretary">
+        </div>
+        <div class="form-group">
+          <label for="s-dept">Department</label>
+          <input id="s-dept" type="text" placeholder="e.g. Administration">
+        </div>
+        <div class="form-group">
+          <label for="s-email">Email</label>
+          <input id="s-email" type="email" placeholder="name@hcmaldives.lk">
+        </div>
+        <div class="form-group">
+          <label for="s-phone">Phone</label>
+          <input id="s-phone" type="text" placeholder="+94 …">
+        </div>
+        <div class="form-group">
+          <label for="s-contrib">Monthly Contribution (LKR)</label>
+          <input id="s-contrib" type="number" placeholder="e.g. 5000" min="0">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addStaff()">➕ Add Staff Member</button>
+        <button class="btn btn-outline" onclick="clearFields(['s-name','s-title','s-dept','s-email','s-phone','s-contrib'])">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-icon">📋</span> Staff Directory</div>
+      <div class="export-bar no-print">
+        <span>Export:</span>
+        <button class="btn btn-gold btn-sm"    onclick="exportStaffExcel()">⬇ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportStaffPDF()">🖨 PDF</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Name</th><th>Designation</th><th>Department</th>
+              <th>Monthly Contrib.</th><th>Total Paid</th><th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="staff-tbody"><tr><td colspan="7"><div class="spinner-wrap"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONTRIBUTIONS ═══════════════════════════════════════ -->
+  <section id="page-contributions" class="page">
+    <div class="card">
+      <div class="card-title"><span class="card-icon">💰</span> Record Contribution</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="c-staff">Staff Member <span style="color:var(--red)">*</span></label>
+          <select id="c-staff"><option value="">— Select Staff —</option></select>
+        </div>
+        <div class="form-group">
+          <label for="c-month">Month <span style="color:var(--red)">*</span></label>
+          <select id="c-month">
+            <option value="">— Month —</option>
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="c-year">Year <span style="color:var(--red)">*</span></label>
+          <select id="c-year"></select>
+        </div>
+        <div class="form-group">
+          <label for="c-amount">Amount (LKR) <span style="color:var(--red)">*</span></label>
+          <input id="c-amount" type="number" placeholder="e.g. 5000" min="0">
+        </div>
+        <div class="form-group">
+          <label for="c-date">Date Received</label>
+          <input id="c-date" type="date">
+        </div>
+        <div class="form-group">
+          <label for="c-notes">Notes</label>
+          <input id="c-notes" type="text" placeholder="Optional note">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addContribution()">✅ Record Contribution</button>
+        <button class="btn btn-outline" onclick="clearFields(['c-staff','c-month','c-amount','c-notes'])">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-icon">🔍</span> Search &amp; Filter</div>
+      <div class="filter-bar">
+        <div class="form-group">
+          <label for="f-staff">Staff Name</label>
+          <select id="f-staff"><option value="">All Staff</option></select>
+        </div>
+        <div class="form-group">
+          <label for="f-month">Month</label>
+          <select id="f-month">
+            <option value="">All Months</option>
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-year">Year</label>
+          <select id="f-year"><option value="">All Years</option></select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <button class="btn btn-primary" onclick="filterContributions()">🔍 Search</button>
+          <button class="btn btn-outline" onclick="resetContribFilter()">Reset</button>
+        </div>
+      </div>
+      <div class="export-bar no-print">
+        <span>Export:</span>
+        <button class="btn btn-gold btn-sm"    onclick="exportContribExcel()">⬇ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportContribPDF()">🖨 PDF</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Staff Name</th><th>Designation</th><th>Month</th>
+              <th>Year</th><th>Amount (LKR)</th><th>Date</th><th>Notes</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="contrib-tbody"><tr><td colspan="9"><div class="spinner-wrap"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ EXPENDITURE ══════════════════════════════════════════ -->
+  <section id="page-expenditure" class="page">
+    <div id="balance-hero"></div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title"><span class="card-icon">📋</span> Add Transaction</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="e-type">Type <span style="color:var(--red)">*</span></label>
+            <select id="e-type">
+              <option value="debit">Debit (Expenditure)</option>
+              <option value="credit">Credit (Other Income)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="e-date">Date <span style="color:var(--red)">*</span></label>
+            <input id="e-date" type="date">
+          </div>
+          <div class="form-group">
+            <label for="e-desc">Description <span style="color:var(--red)">*</span></label>
+            <input id="e-desc" type="text" placeholder="e.g. National Day Event">
+          </div>
+          <div class="form-group">
+            <label for="e-amount">Amount (LKR) <span style="color:var(--red)">*</span></label>
+            <input id="e-amount" type="number" placeholder="e.g. 15000" min="0">
+          </div>
+          <div class="form-group">
+            <label for="e-category">Category</label>
+            <input id="e-category" type="text" placeholder="e.g. Events, Transport">
+          </div>
+          <div class="form-group">
+            <label for="e-remarks">Remarks</label>
+            <input id="e-remarks" type="text" placeholder="Optional">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="addExpenditure()">➕ Add Transaction</button>
+          <button class="btn btn-outline" onclick="clearFields(['e-desc','e-amount','e-category','e-remarks'])">Clear</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-icon">📊</span> Summary</div>
+        <div id="exp-summary"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-icon">📒</span> Ledger</div>
+      <div class="filter-bar">
+        <div class="form-group">
+          <label for="ef-year">Year</label>
+          <select id="ef-year"><option value="">All Years</option></select>
+        </div>
+        <div class="form-group">
+          <label for="ef-type">Type</label>
+          <select id="ef-type">
+            <option value="">All</option>
+            <option value="credit">Credit</option>
+            <option value="debit">Debit</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <button class="btn btn-primary" onclick="renderExpTable()">🔍 Filter</button>
+          <button class="btn btn-outline" onclick="resetExpFilter()">Reset</button>
+        </div>
+      </div>
+      <div class="export-bar no-print">
+        <span>Export:</span>
+        <button class="btn btn-gold btn-sm"    onclick="exportExpExcel()">⬇ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportExpPDF()">🖨 PDF</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Date</th><th>Description</th><th>Category</th>
+              <th>Type</th><th>Credit (LKR)</th><th>Debit (LKR)</th>
+              <th>Balance (LKR)</th><th>Remarks</th><th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="exp-tbody"><tr><td colspan="10"><div class="spinner-wrap"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ REPORTS ══════════════════════════════════════════════ -->
+  <section id="page-reports" class="page">
+    <div class="card">
+      <div class="card-title"><span class="card-icon">📄</span> Generate Report</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="r-type">Report Type</label>
+          <select id="r-type">
+            <option value="summary-by-staff">Contributions Summary (by Staff)</option>
+            <option value="summary-by-month">Contributions by Month</option>
+            <option value="detail">All Contributions Detail</option>
+            <option value="ledger">Full Expenditure Ledger</option>
+            <option value="outstanding">Outstanding Contributions</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="r-year">Year</label>
+          <select id="r-year"><option value="">All Years</option></select>
+        </div>
+        <div class="form-group">
+          <label for="r-staff">Staff Member</label>
+          <select id="r-staff"><option value="">All Staff</option></select>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="generateReport()">📊 Generate</button>
+        <button class="btn btn-gold"    onclick="exportReportExcel()">⬇ Excel</button>
+        <button class="btn btn-outline" onclick="exportReportPDF()">🖨 PDF</button>
+      </div>
+    </div>
+    <div id="report-output"></div>
+  </section>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p  id="modal-msg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger"  id="modal-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     APPLICATION LOGIC
+════════════════════════════════════════════════════════════ -->
+<script>
+/* ─── Tiny helpers ──────────────────────────────────────────── */
+const fmt    = n  => Number(n).toLocaleString('en-LK', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const $       = id => document.getElementById(id);
+const val     = id => $( id )?.value?.trim() ?? '';
+const setV    = (id,v) => { if($(id)) $(id).value = v; };
+
+function clearFields(ids) { ids.forEach(id => setV(id,'')); }
+
+/* ─── Toast ─────────────────────────────────────────────────── */
+function toast(msg, type = 'info', dur = 3500) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className   = '';                        // reset classes
+  t.classList.add('show');
+  if (type === 'error') t.style.borderLeftColor = 'var(--red)';
+  else                  t.style.borderLeftColor = 'var(--gold)';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+/* ─── Modal ─────────────────────────────────────────────────── */
+function showModal(title, msg, cb) {
+  $('modal-title').textContent = title;
+  $('modal-msg').textContent   = msg;
+  $('modal').classList.add('open');
+  $('modal-ok').onclick = () => { closeModal(); cb(); };
+}
+function closeModal() { $('modal').classList.remove('open'); }
+
+/* ─── Empty row helper ──────────────────────────────────────── */
+function emptyRow(cols, msg = 'No records found.') {
+  return `<tr><td colspan="${cols}"><div class="empty">
+    <div class="empty-icon">📭</div><p>${msg}</p>
+  </div></td></tr>`;
+}
+
+/* ─── Year selects ──────────────────────────────────────────── */
+const CUR_YEAR = new Date().getFullYear();
+const YEARS    = Array.from({length:8}, (_,i) => CUR_YEAR - 3 + i);
+
+function fillYearSelect(id, includeAll = false) {
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = (includeAll ? '<option value="">All Years</option>' : '') +
+    YEARS.map(y => `<option value="${y}" ${y===CUR_YEAR?'selected':''}>${y}</option>`).join('');
+}
+
+/* ─── Navigation ────────────────────────────────────────────── */
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  $('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard')   renderDashboard();
+  if (name === 'expenditure') { renderBalanceHero(); renderExpSummary(); renderExpTable(); }
+  if (name === 'reports')     populateReportFilters();
+}
+
+/* ─── Populate staff dropdowns ──────────────────────────────── */
+async function populateStaffDropdowns() {
+  const staff = await DB.staff.getAll();
+  const opts  = staff.map(s => `<option value="${s.id}">${s.name} – ${s.title}</option>`).join('');
+  const aOpts = staff.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  $('c-staff').innerHTML = '<option value="">— Select Staff —</option>' + opts;
+  $('f-staff').innerHTML = '<option value="">All Staff</option>' + aOpts;
+  const rs = $('r-staff');
+  if (rs) rs.innerHTML   = '<option value="">All Staff</option>' + aOpts;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  try {
+    const [staff, contributions, expenditure] = await Promise.all([
+      DB.staff.getAll(),
+      DB.contributions.getAll(),
+      DB.expenditure.getAll(),
+    ]);
+
+    const totalContrib = contributions.reduce((s,c) => s + Number(c.amount), 0);
+    const totalDebit   = expenditure.filter(e=>e.type==='debit').reduce((s,e)=>s+Number(e.amount),0);
+    const totalCredit  = expenditure.filter(e=>e.type==='credit').reduce((s,e)=>s+Number(e.amount),0);
+    const balance      = totalContrib + totalCredit - totalDebit;
+
+    const curMonth   = new Date().toLocaleString('default',{month:'long'});
+    const monthTotal = contributions
+      .filter(c => c.month === curMonth && Number(c.year) === CUR_YEAR)
+      .reduce((s,c) => s+Number(c.amount), 0);
+
+    /* ── Stat cards ── */
+    $('stats-grid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Staff</div>
+        <div class="stat-value">${staff.length}</div>
+        <div class="stat-sub">Active members</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Contributions</div>
+        <div class="stat-value" style="font-size:1.3rem">LKR ${fmt(totalContrib)}</div>
+        <div class="stat-sub">All time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">${curMonth} ${CUR_YEAR}</div>
+        <div class="stat-value" style="font-size:1.3rem">LKR ${fmt(monthTotal)}</div>
+        <div class="stat-sub">This month's contributions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current Balance</div>
+        <div class="stat-value" style="font-size:1.3rem;color:${balance>=0?'var(--green)':'var(--red)'}">
+          LKR ${fmt(balance)}
+        </div>
+        <div class="stat-sub">Contributions − Expenditure</div>
+      </div>
+    `;
+
+    /* ── Recent contributions ── */
+    const recentC = [...contributions].reverse().slice(0,6);
+    $('dash-contributions').innerHTML = recentC.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr><th>Staff Name</th><th>Month / Year</th><th>Amount</th></tr></thead>
+          <tbody>${recentC.map(c=>`
+            <tr>
+              <td><strong>${c.staffName || '—'}</strong><small>${c.staffTitle || ''}</small></td>
+              <td>${c.month} ${c.year}</td>
+              <td class="amt-credit">LKR ${fmt(c.amount)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>`
+      : `<div class="empty"><div class="empty-icon">💰</div><p>No contributions yet.</p></div>`;
+
+    /* ── Recent transactions ── */
+    const recentE = [...expenditure].reverse().slice(0,6);
+    $('dash-transactions').innerHTML = recentE.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+          <tbody>${recentE.map(e=>`
+            <tr>
+              <td>${e.date||'—'}</td>
+              <td>${e.desc||'—'}</td>
+              <td><span class="badge ${e.type==='credit'?'badge-green':'badge-red'}">${e.type}</span></td>
+              <td class="${e.type==='credit'?'amt-credit':'amt-debit'}">LKR ${fmt(e.amount)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>`
+      : `<div class="empty"><div class="empty-icon">📋</div><p>No transactions yet.</p></div>`;
+
+  } catch(err) {
+    console.error(err);
+    toast('⚠ Could not load dashboard: ' + err.message, 'error');
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   STAFF
+═══════════════════════════════════════════════════════════ */
+async function addStaff() {
+  const name  = val('s-name');
+  const title = val('s-title');
+  if (!name || !title) { toast('⚠ Name and designation are required.', 'error'); return; }
+
+  try {
+    await DB.staff.add({
+      name, title,
+      dept:               val('s-dept'),
+      email:              val('s-email'),
+      phone:              val('s-phone'),
+      monthlyContribution: Number(val('s-contrib')) || 0,
+    });
+    clearFields(['s-name','s-title','s-dept','s-email','s-phone','s-contrib']);
+    await renderStaffTable();
+    await populateStaffDropdowns();
+    renderDashboard();
+    toast('✅ Staff member added successfully.');
+  } catch(err) {
+    toast('⚠ Error: ' + err.message, 'error');
+  }
+}
+
+async function deleteStaff(id) {
+  showModal('Delete Staff Member', 'Remove this staff member? Their contribution records will remain.', async () => {
+    try {
+      await DB.staff.delete(id);
+      await renderStaffTable();
+      await populateStaffDropdowns();
+      renderDashboard();
+      toast('Staff member removed.');
+    } catch(err) { toast('⚠ ' + err.message, 'error'); }
+  });
+}
+
+async function renderStaffTable() {
+  try {
+    const [staff, contributions] = await Promise.all([
+      DB.staff.getAll(), DB.contributions.getAll()
+    ]);
+    const tbody = $('staff-tbody');
+    if (!staff.length) {
+      tbody.innerHTML = emptyRow(7,'No staff members added yet.');
+      return;
+    }
+    tbody.innerHTML = staff.map((s,i) => {
+      const paid = contributions
+        .filter(c => Number(c.staffId) === Number(s.id))
+        .reduce((sum,c) => sum+Number(c.amount), 0);
+      return `
+        <tr>
+          <td>${i+1}</td>
+          <td><strong>${s.name}</strong><small>${s.email||''}</small></td>
+          <td><span class="badge badge-navy">${s.title}</span></td>
+          <td>${s.dept||'—'}</td>
+          <td>${s.monthlyContribution ? 'LKR '+fmt(s.monthlyContribution) : '—'}</td>
+          <td class="amt-credit">LKR ${fmt(paid)}</td>
+          <td class="no-print">
+            <button class="btn btn-danger btn-xs" onclick="deleteStaff(${s.id})">🗑 Remove</button>
+          </td>
+        </tr>`;
+    }).join('');
+  } catch(err) {
+    $('staff-tbody').innerHTML = emptyRow(7,'Error loading staff: ' + err.message);
+  }
+}
+
+async function exportStaffExcel() {
+  const [staff, contributions] = await Promise.all([DB.staff.getAll(), DB.contributions.getAll()]);
+  const data = staff.map(s => ({
+    'Name': s.name, 'Designation': s.title, 'Department': s.dept||'',
+    'Email': s.email||'', 'Phone': s.phone||'',
+    'Monthly Contribution (LKR)': s.monthlyContribution||0,
+    'Total Paid (LKR)': contributions.filter(c=>Number(c.staffId)===Number(s.id)).reduce((n,c)=>n+Number(c.amount),0),
+  }));
+  xlsxDownload(data, 'HCMSL_Staff');
+}
+async function exportStaffPDF() {
+  const [staff, contributions] = await Promise.all([DB.staff.getAll(), DB.contributions.getAll()]);
+  const rows = staff.map((s,i) => [
+    i+1, s.name, s.title, s.dept||'', s.monthlyContribution||0,
+    contributions.filter(c=>Number(c.staffId)===Number(s.id)).reduce((n,c)=>n+Number(c.amount),0)
+  ]);
+  pdfDownload('Staff Directory',['#','Name','Designation','Dept','Monthly (LKR)','Total Paid (LKR)'],rows,'HCMSL_Staff');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CONTRIBUTIONS  — BUG FIX: staffName was null because
+   the old code sent staffName from JS; now PHP fetches it
+   from the staff table on insert. JS just sends staffId.
+═══════════════════════════════════════════════════════════ */
+async function addContribution() {
+  const staffId = Number(val('c-staff'));
+  const month   = val('c-month');
+  const year    = Number(val('c-year'));
+  const amount  = Number(val('c-amount'));
+
+  if (!staffId) { toast('⚠ Please select a staff member.', 'error'); return; }
+  if (!month)   { toast('⚠ Please select a month.', 'error'); return; }
+  if (!year)    { toast('⚠ Please select a year.', 'error'); return; }
+  if (!amount || amount <= 0) { toast('⚠ Please enter a valid amount.', 'error'); return; }
+
+  try {
+    // PHP will look up staffName + staffTitle from the staff table automatically
+    const saved = await DB.contributions.add({
+      staffId,
+      month,
+      year,
+      amount,
+      date:  val('c-date'),
+      notes: val('c-notes'),
+    });
+
+    clearFields(['c-staff','c-month','c-amount','c-notes']);
+
+    // Reload the full list and show success
+    const all = await DB.contributions.getAll();
+    renderContribTable(all);
+    renderDashboard();
+    toast(`✅ Contribution recorded for ${saved.staffName} — ${month} ${year}.`);
+  } catch(err) {
+    console.error(err);
+    toast('⚠ Error saving contribution: ' + err.message, 'error');
+  }
+}
+
+async function deleteContrib(id) {
+  showModal('Delete Contribution', 'Remove this contribution record permanently?', async () => {
+    try {
+      await DB.contributions.delete(id);
+      const all = await DB.contributions.getAll();
+      renderContribTable(all);
+      renderDashboard();
+      toast('Contribution removed.');
+    } catch(err) { toast('⚠ ' + err.message, 'error'); }
+  });
+}
+
+async function filterContributions() {
+  try {
+    const staffId = val('f-staff');
+    const month   = val('f-month');
+    const year    = val('f-year');
+    const data    = await DB.contributions.query({ staffId, month, year });
+    renderContribTable(data);
+  } catch(err) { toast('⚠ ' + err.message, 'error'); }
+}
+
+async function resetContribFilter() {
+  clearFields(['f-staff','f-month','f-year']);
+  renderContribTable(await DB.contributions.getAll());
+}
+
+function renderContribTable(data) {
+  const tbody = $('contrib-tbody');
+  if (!data.length) { tbody.innerHTML = emptyRow(9,'No contributions match the filter.'); return; }
+  tbody.innerHTML = data.map((c,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${c.staffName || '—'}</strong></td>
+      <td><span class="badge badge-navy">${c.staffTitle || '—'}</span></td>
+      <td>${c.month}</td>
+      <td>${c.year}</td>
+      <td class="amt-credit">LKR ${fmt(c.amount)}</td>
+      <td>${c.date || '—'}</td>
+      <td>${c.notes || '—'}</td>
+      <td class="no-print">
+        <button class="btn btn-danger btn-xs" onclick="deleteContrib(${c.id})">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function exportContribExcel() {
+  const data = (await DB.contributions.getAll()).map(c=>({
+    'Staff Name': c.staffName, 'Designation': c.staffTitle||'',
+    'Month': c.month, 'Year': c.year, 'Amount (LKR)': c.amount,
+    'Date': c.date||'', 'Notes': c.notes||''
+  }));
+  xlsxDownload(data,'HCMSL_Contributions');
+}
+async function exportContribPDF() {
+  const rows = (await DB.contributions.getAll()).map((c,i)=>
+    [i+1, c.staffName, c.staffTitle||'', c.month, c.year, c.amount, c.date||'', c.notes||'']
+  );
+  pdfDownload('Contributions Register',
+    ['#','Staff Name','Designation','Month','Year','Amount (LKR)','Date','Notes'],
+    rows,'HCMSL_Contributions','landscape');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   EXPENDITURE — BUG FIX: column `descr` renamed to
+   `description` in DB; PHP maps it back to `desc` for JS.
+═══════════════════════════════════════════════════════════ */
+async function getBalanceFigures() {
+  const [contributions, expenditure] = await Promise.all([
+    DB.contributions.getAll(), DB.expenditure.getAll()
+  ]);
+  const totalContrib = contributions.reduce((s,c)=>s+Number(c.amount),0);
+  const totalDebit   = expenditure.filter(e=>e.type==='debit').reduce((s,e)=>s+Number(e.amount),0);
+  const totalCredit  = expenditure.filter(e=>e.type==='credit').reduce((s,e)=>s+Number(e.amount),0);
+  const balance      = totalContrib + totalCredit - totalDebit;
+  return { totalContrib, totalDebit, totalCredit, balance, expenditure };
+}
+
+async function renderBalanceHero() {
+  try {
+    const { totalContrib, totalDebit, totalCredit, balance } = await getBalanceFigures();
+    $('balance-hero').innerHTML = `
+      <div class="balance-hero">
+        <div class="bal-label">Current Fund Balance</div>
+        <div class="bal-amount"><span class="bal-currency">LKR</span>${fmt(balance)}</div>
+        <div class="bal-meta">
+          <div class="bal-meta-item">
+            <div class="bm-label">Total Contributions</div>
+            <div class="bm-value bm-cr">LKR ${fmt(totalContrib)}</div>
+          </div>
+          <div class="bal-meta-item">
+            <div class="bm-label">Other Credits</div>
+            <div class="bm-value bm-cr">LKR ${fmt(totalCredit)}</div>
+          </div>
+          <div class="bal-meta-item">
+            <div class="bm-label">Total Expenditure</div>
+            <div class="bm-value bm-db">LKR ${fmt(totalDebit)}</div>
+          </div>
+          <div class="bal-meta-item">
+            <div class="bm-label">Net Balance</div>
+            <div class="bm-value ${balance>=0?'bm-cr':'bm-db'}">LKR ${fmt(balance)}</div>
+          </div>
+        </div>
+      </div>`;
+  } catch(err) { console.error(err); }
+}
+
+async function renderExpSummary() {
+  try {
+    const { totalContrib, totalDebit, totalCredit, balance, expenditure } = await getBalanceFigures();
+    const cats = {};
+    expenditure.filter(e=>e.type==='debit').forEach(e => {
+      const k = e.category || 'Uncategorized';
+      cats[k] = (cats[k]||0) + Number(e.amount);
+    });
+    const catRows = Object.entries(cats).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`<div class="summary-row"><span class="summary-label">${k}</span><span class="amt-debit">LKR ${fmt(v)}</span></div>`)
+      .join('');
+    $('exp-summary').innerHTML = `
+      <div class="summary-row"><span class="summary-label">Contributions In</span><span class="amt-credit">LKR ${fmt(totalContrib)}</span></div>
+      <div class="summary-row"><span class="summary-label">Other Credits</span><span class="amt-credit">LKR ${fmt(totalCredit)}</span></div>
+      <div class="summary-row"><span class="summary-label">Total Expenditure</span><span class="amt-debit">LKR ${fmt(totalDebit)}</span></div>
+      <div class="summary-row total">
+        <span>Net Balance</span>
+        <span style="color:${balance>=0?'var(--green)':'var(--red)'}">LKR ${fmt(balance)}</span>
+      </div>
+      ${catRows ? `<div style="margin-top:18px;"><div style="font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Spending by Category</div>${catRows}</div>` : ''}`;
+  } catch(err) { console.error(err); }
+}
+
+async function addExpenditure() {
+  const type   = val('e-type');
+  const desc   = val('e-desc');
+  const amount = Number(val('e-amount'));
+  const date   = val('e-date');
+
+  if (!desc)          { toast('⚠ Description is required.', 'error'); return; }
+  if (!amount || amount <= 0) { toast('⚠ Enter a valid amount.', 'error'); return; }
+  if (!date)          { toast('⚠ Date is required.', 'error'); return; }
+
+  try {
+    await DB.expenditure.add({ type, desc, amount, date,
+      category: val('e-category'),
+      remarks:  val('e-remarks'),
+    });
+    clearFields(['e-desc','e-amount','e-category','e-remarks']);
+    await Promise.all([renderBalanceHero(), renderExpSummary(), renderExpTable()]);
+    renderDashboard();
+    toast('✅ Transaction added successfully.');
+  } catch(err) {
+    console.error(err);
+    toast('⚠ Error: ' + err.message, 'error');
+  }
+}
+
+async function deleteExp(id) {
+  showModal('Delete Transaction','Remove this transaction permanently?', async () => {
+    try {
+      await DB.expenditure.delete(id);
+      await Promise.all([renderBalanceHero(), renderExpSummary(), renderExpTable()]);
+      renderDashboard();
+      toast('Transaction removed.');
+    } catch(err) { toast('⚠ ' + err.message, 'error'); }
+  });
+}
+
+async function renderExpTable() {
+  try {
+    const yrF = val('ef-year');
+    const tyF = val('ef-type');
+    const data = await DB.expenditure.query({ year: yrF, type: tyF });
+
+    // Running balance from ALL contributions + ALL expenditure in date order
+    const [allContribs, allExp] = await Promise.all([DB.contributions.getAll(), DB.expenditure.getAll()]);
+    const contribTotal = allContribs.reduce((s,c)=>s+Number(c.amount),0);
+    let rb = contribTotal;
+    const balMap = {};
+    allExp.forEach(e => {
+      rb = e.type==='credit' ? rb+Number(e.amount) : rb-Number(e.amount);
+      balMap[e.id] = rb;
+    });
+
+    const tbody = $('exp-tbody');
+    if (!data.length) { tbody.innerHTML = emptyRow(10,'No transactions match the filter.'); return; }
+    tbody.innerHTML = data.map((e,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${e.date||'—'}</td>
+        <td><strong>${e.desc||'—'}</strong></td>
+        <td>${e.category||'—'}</td>
+        <td><span class="badge ${e.type==='credit'?'badge-green':'badge-red'}">${e.type}</span></td>
+        <td class="amt-credit">${e.type==='credit'?'LKR '+fmt(e.amount):'—'}</td>
+        <td class="amt-debit">${e.type==='debit'?'LKR '+fmt(e.amount):'—'}</td>
+        <td class="amt-balance">LKR ${fmt(balMap[e.id]??0)}</td>
+        <td>${e.remarks||'—'}</td>
+        <td class="no-print">
+          <button class="btn btn-danger btn-xs" onclick="deleteExp(${e.id})">🗑</button>
+        </td>
+      </tr>`).join('');
+  } catch(err) {
+    $('exp-tbody').innerHTML = emptyRow(10,'Error: ' + err.message);
+  }
+}
+
+async function resetExpFilter() {
+  clearFields(['ef-year','ef-type']);
+  renderExpTable();
+}
+
+async function exportExpExcel() {
+  const all = await DB.expenditure.getAll();
+  const contribTotal = (await DB.contributions.getAll()).reduce((s,c)=>s+Number(c.amount),0);
+  let bal = contribTotal;
+  const data = all.map(e => {
+    bal = e.type==='credit' ? bal+Number(e.amount) : bal-Number(e.amount);
+    return { 'Date':e.date||'','Description':e.desc||'','Category':e.category||'','Type':e.type,
+      'Credit (LKR)':e.type==='credit'?e.amount:0,'Debit (LKR)':e.type==='debit'?e.amount:0,
+      'Balance (LKR)':bal,'Remarks':e.remarks||'' };
+  });
+  xlsxDownload(data,'HCMSL_Ledger');
+}
+async function exportExpPDF() {
+  const all = await DB.expenditure.getAll();
+  const contribTotal = (await DB.contributions.getAll()).reduce((s,c)=>s+Number(c.amount),0);
+  let bal = contribTotal;
+  const rows = all.map((e,i) => {
+    bal = e.type==='credit' ? bal+Number(e.amount) : bal-Number(e.amount);
+    return [i+1,e.date||'',e.desc||'',e.category||'',e.type,
+      e.type==='credit'?e.amount:'-',e.type==='debit'?e.amount:'-',bal,e.remarks||''];
+  });
+  pdfDownload('Expenditure Ledger',
+    ['#','Date','Description','Category','Type','Credit (LKR)','Debit (LKR)','Balance (LKR)','Remarks'],
+    rows,'HCMSL_Ledger','landscape');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   REPORTS
+═══════════════════════════════════════════════════════════ */
+let _reportRows = [], _reportHead = [];
+
+function populateReportFilters() {
+  fillYearSelect('r-year', true);
+  populateStaffDropdowns();
+}
+
+async function generateReport() {
+  const type    = val('r-type');
+  const yr      = val('r-year');
+  const staffId = val('r-staff');
+  _reportRows   = [];
+  _reportHead   = [];
+
+  try {
+    const [staff, contributions, expenditure] = await Promise.all([
+      DB.staff.getAll(), DB.contributions.getAll(), DB.expenditure.getAll()
+    ]);
+
+    let html = '';
+
+    if (type === 'summary-by-staff') {
+      _reportHead = ['Name','Designation','Months Paid','Total (LKR)'];
+      const list = staffId ? staff.filter(s=>s.id==staffId) : staff;
+      let grand  = 0;
+      const rows = list.map(s => {
+        let cs = contributions.filter(c=>Number(c.staffId)===Number(s.id));
+        if (yr) cs = cs.filter(c=>c.year==yr);
+        const total = cs.reduce((n,c)=>n+Number(c.amount),0);
+        grand += total;
+        _reportRows.push([s.name, s.title, cs.length, total]);
+        return `<tr><td>${s.name}</td><td><span class="badge badge-navy">${s.title}</span></td><td>${cs.length}</td><td class="amt-credit">LKR ${fmt(total)}</td></tr>`;
+      });
+      html = reportCard(`Contributions Summary${yr?' – '+yr:''}`,
+        '<tr><th>Name</th><th>Designation</th><th>Months Paid</th><th>Total (LKR)</th></tr>',
+        rows.join('') + `<tr class="tfoot-row"><td colspan="3"><strong>Grand Total</strong></td><td class="amt-credit"><strong>LKR ${fmt(grand)}</strong></td></tr>`);
+    }
+
+    else if (type === 'summary-by-month') {
+      _reportHead = ['Month','Year','Payments','Total (LKR)'];
+      let cs = [...contributions];
+      if (yr)      cs = cs.filter(c=>c.year==yr);
+      if (staffId) cs = cs.filter(c=>c.staffId==staffId);
+      const map = {};
+      cs.forEach(c => {
+        const k = c.month+'|'+c.year;
+        map[k] = map[k]||{month:c.month,year:c.year,count:0,total:0};
+        map[k].count++; map[k].total+=Number(c.amount);
+      });
+      const rows = Object.values(map).map(r => {
+        _reportRows.push([r.month,r.year,r.count,r.total]);
+        return `<tr><td>${r.month}</td><td>${r.year}</td><td>${r.count}</td><td class="amt-credit">LKR ${fmt(r.total)}</td></tr>`;
+      });
+      html = reportCard('Contributions by Month',
+        '<tr><th>Month</th><th>Year</th><th>Payments</th><th>Total (LKR)</th></tr>',
+        rows.join('')||emptyRow(4));
+    }
+
+    else if (type === 'detail') {
+      _reportHead = ['Name','Designation','Month','Year','Amount (LKR)','Date','Notes'];
+      let cs = [...contributions];
+      if (yr)      cs = cs.filter(c=>c.year==yr);
+      if (staffId) cs = cs.filter(c=>c.staffId==staffId);
+      const rows = cs.map(c => {
+        _reportRows.push([c.staffName,c.staffTitle||'',c.month,c.year,c.amount,c.date||'',c.notes||'']);
+        return `<tr><td>${c.staffName}</td><td>${c.staffTitle||''}</td><td>${c.month}</td><td>${c.year}</td><td class="amt-credit">LKR ${fmt(c.amount)}</td><td>${c.date||'—'}</td><td>${c.notes||'—'}</td></tr>`;
+      });
+      html = reportCard(`Contributions Detail${yr?' – '+yr:''}`,
+        '<tr><th>Name</th><th>Designation</th><th>Month</th><th>Year</th><th>Amount</th><th>Date</th><th>Notes</th></tr>',
+        rows.join('')||emptyRow(7));
+    }
+
+    else if (type === 'ledger') {
+      _reportHead = ['Date','Description','Category','Type','Credit (LKR)','Debit (LKR)','Balance (LKR)','Remarks'];
+      const contribTotal = contributions.reduce((s,c)=>s+Number(c.amount),0);
+      let bal = contribTotal;
+      let exp = [...expenditure];
+      if (yr) exp = exp.filter(e=>e.date&&e.date.startsWith(yr));
+      const rows = exp.map(e => {
+        bal = e.type==='credit'?bal+Number(e.amount):bal-Number(e.amount);
+        _reportRows.push([e.date||'',e.desc||'',e.category||'',e.type,e.type==='credit'?e.amount:0,e.type==='debit'?e.amount:0,bal,e.remarks||'']);
+        return `<tr>
+          <td>${e.date||'—'}</td><td><strong>${e.desc||'—'}</strong></td><td>${e.category||'—'}</td>
+          <td><span class="badge ${e.type==='credit'?'badge-green':'badge-red'}">${e.type}</span></td>
+          <td class="amt-credit">${e.type==='credit'?'LKR '+fmt(e.amount):'—'}</td>
+          <td class="amt-debit">${e.type==='debit'?'LKR '+fmt(e.amount):'—'}</td>
+          <td class="amt-balance">LKR ${fmt(bal)}</td>
+          <td>${e.remarks||'—'}</td>
+        </tr>`;
+      });
+      html = reportCard(`Expenditure Ledger${yr?' – '+yr:''}`,
+        '<tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Credit</th><th>Debit</th><th>Balance</th><th>Remarks</th></tr>',
+        rows.join('')||emptyRow(8));
+    }
+
+    else if (type === 'outstanding') {
+      _reportHead = ['Name','Designation','Year','Months Outstanding','Count'];
+      const checkYear  = yr || CUR_YEAR;
+      const allMonths  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const upTo       = Number(checkYear) < CUR_YEAR ? allMonths : allMonths.slice(0, new Date().getMonth()+1);
+      const list       = staffId ? staff.filter(s=>s.id==staffId) : staff;
+      const rows       = [];
+      list.forEach(s => {
+        const paid    = contributions.filter(c=>Number(c.staffId)===Number(s.id)&&c.year==checkYear).map(c=>c.month);
+        const missing = upTo.filter(m=>!paid.includes(m));
+        if (missing.length) {
+          _reportRows.push([s.name,s.title,checkYear,missing.join(', '),missing.length]);
+          rows.push(`<tr>
+            <td><strong>${s.name}</strong></td>
+            <td><span class="badge badge-navy">${s.title}</span></td>
+            <td>${checkYear}</td>
+            <td style="color:var(--red)">${missing.join(', ')}</td>
+            <td><span class="badge badge-red">${missing.length}</span></td>
+          </tr>`);
+        }
+      });
+      html = rows.length
+        ? reportCard(`Outstanding – ${checkYear}`,
+            '<tr><th>Name</th><th>Designation</th><th>Year</th><th>Months Outstanding</th><th>Count</th></tr>',
+            rows.join(''))
+        : `<div class="card"><div class="empty"><div class="empty-icon">✅</div><p>All contributions are up to date!</p></div></div>`;
+    }
+
+    $('report-output').innerHTML = html;
+    toast('✅ Report generated.');
+  } catch(err) {
+    toast('⚠ ' + err.message, 'error');
+  }
+}
+
+function reportCard(title, thead, tbody) {
+  return `<div class="card">
+    <div class="card-title"><span class="card-icon">📊</span> ${title}</div>
+    <div class="table-wrap"><table><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>
+  </div>`;
+}
+
+function exportReportExcel() {
+  if (!_reportRows.length) { toast('⚠ Generate a report first.','error'); return; }
+  const data = _reportRows.map(row => { const o={}; _reportHead.forEach((h,i)=>o[h]=row[i]); return o; });
+  xlsxDownload(data,'HCMSL_Report');
+}
+function exportReportPDF() {
+  if (!_reportRows.length) { toast('⚠ Generate a report first.','error'); return; }
+  pdfDownload($('r-type').options[$('r-type').selectedIndex].text, _reportHead, _reportRows, 'HCMSL_Report');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT UTILITIES
+═══════════════════════════════════════════════════════════ */
+function xlsxDownload(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, filename + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('✅ Excel downloaded.');
+}
+
+function pdfDownload(title, head, rows, filename, orientation='portrait') {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation });
+  const pw  = doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('High Commission of Maldives in Sri Lanka', pw/2, 15, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(title, pw/2, 23, {align:'center'});
+  doc.setFontSize(8); doc.setTextColor(130);
+  doc.text('Generated: ' + new Date().toLocaleString(), pw/2, 30, {align:'center'});
+  doc.setTextColor(0);
+  doc.autoTable({
+    startY: 36, head:[head], body:rows,
+    styles:{ fontSize:8, cellPadding:3 },
+    headStyles:{ fillColor:[10,22,40], textColor:[201,168,76], fontStyle:'bold' },
+    alternateRowStyles:{ fillColor:[247,243,236] },
+    margin:{ left:14, right:14 },
+  });
+  doc.save(filename + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+  toast('✅ PDF downloaded.');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   INITIALISE
+═══════════════════════════════════════════════════════════ */
+async function init() {
+  try {
+    await DB.ready;
+
+    // Fill year dropdowns
+    fillYearSelect('c-year');
+    fillYearSelect('f-year', true);
+    fillYearSelect('ef-year', true);
+    fillYearSelect('r-year', true);
+
+    // Default dates to today
+    const today = new Date().toISOString().slice(0,10);
+    setV('c-date', today);
+    setV('e-date', today);
+
+    // Load everything
+    await Promise.all([
+      populateStaffDropdowns(),
+      renderDashboard(),
+      renderStaffTable(),
+      DB.contributions.getAll().then(renderContribTable),
+      renderBalanceHero(),
+      renderExpSummary(),
+      renderExpTable(),
+    ]);
+
+    toast('✅ System loaded successfully.');
+  } catch(err) {
+    console.error('Init error:', err);
+    toast('⚠ ' + err.message + ' — Is XAMPP running?', 'error');
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
